@@ -1,0 +1,159 @@
+options {
+   MULTI=true;
+   STATIC=false;
+   VISITOR=true;
+}
+
+PARSER_BEGIN(WhitespaceParser)
+package org.absharma.whitespace;
+
+public class WhitespaceParser {
+
+}
+
+PARSER_END(WhitespaceParser)
+
+
+TOKEN : /* LITERALS */
+{
+  <SPACE: "S">
+  |
+  <TAB: "T">
+  |
+  <LF: "L">
+}
+
+/*
+ * Program structuring syntax follows.
+ */
+void CompilationUnit():
+{
+}
+{
+   (
+        (Command())*
+   )
+   <EOF>
+}
+
+void Command() #void:
+{}
+{
+    StackCommand()
+    |
+    LOOKAHEAD(2)
+    IOCommand()
+    |
+    ArithmeticCommand()
+}
+
+void StackCommand():
+{}
+{
+    StackImp() StackCommandPushInstr()
+}
+
+void StackImp() #void:
+{}
+{
+    <SPACE>
+}
+
+void StackCommandPushInstr():
+{}
+{
+    <SPACE> ((Zero()|One())* <LF>)
+}
+
+void Zero() #void :
+{
+   Token t;
+}
+{
+  (
+    t = <SPACE>
+    {
+        jjtThis.jjtSetValue("0");
+    }
+   )#ZeroLiteral
+}
+
+void One() #void :
+{
+   Token t;
+}
+{
+  (
+    t = <TAB>
+    {
+        jjtThis.jjtSetValue("1");
+    }
+   )#OneLiteral
+}
+
+void IOCommand():
+{}
+{
+    IOImp() IOCommandOutputNumberInstr()
+}
+
+void IOImp() #void:
+{}
+{
+  <TAB><LF>
+}
+
+void IOCommandOutputNumberInstr():
+{}
+{
+    <SPACE><TAB>
+}
+
+void ArithmeticCommand():
+{}
+{
+    ArithmeticImp()
+    (
+    ArithmeticCommandDivisionInstr()
+    |
+    LOOKAHEAD(2)
+    (
+    LOOKAHEAD(2)
+    ArithmeticCommandAdditionInstr()
+    |
+    ArithmeticCommandSubtractionInstr()
+    )
+    |
+    ArithmeticCommandMultiplicationInstr()
+    )
+}
+
+void ArithmeticImp() #void:
+{}
+{
+    <TAB><SPACE>
+}
+
+void ArithmeticCommandAdditionInstr():
+{}
+{
+    <SPACE><SPACE>
+}
+
+void ArithmeticCommandSubtractionInstr():
+{}
+{
+    <SPACE><TAB>
+}
+
+void ArithmeticCommandMultiplicationInstr():
+{}
+{
+    <SPACE><LF>
+}
+
+void ArithmeticCommandDivisionInstr():
+{}
+{
+    <TAB><SPACE>
+}

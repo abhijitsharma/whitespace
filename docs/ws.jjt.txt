@@ -1,0 +1,260 @@
+options {
+   MULTI=true;
+   STATIC=false;
+   VISITOR=true;
+}
+
+PARSER_BEGIN(WhitespaceParser)
+package org.absharma.whitespace;
+
+public class WhitespaceParser {
+
+}
+
+PARSER_END(WhitespaceParser)
+
+
+SKIP : /* WHITE SPACE */
+{
+  " "
+| "\t"
+| "\n"
+| "\r"
+| "\f"
+}
+
+
+TOKEN : /* LITERALS */
+{
+  < IDENTIFIER: <LETTER> (<LETTER>|<DIGIT>|"."|"["|"]")* >
+  |
+  < INTEGER_LITERAL:
+        <DECIMAL_LITERAL> (["l","L"])?
+      | <HEX_LITERAL> (["l","L"])?
+      | <OCTAL_LITERAL> (["l","L"])?
+  >
+
+  |
+  < STRING_LITERAL:
+      "\""
+      (   (~["\"","\\","\n","\r"])
+        | ("\\"
+            ( ["n","t","b","r","f","\\","'","\""]
+            | ["0"-"7"] ( ["0"-"7"] )?
+            | ["0"-"3"] ["0"-"7"] ["0"-"7"]
+            )
+          )
+      )*
+      "\""
+  >
+
+  |
+
+  < #LETTER: [ "a"-"z", "A"-"Z" ] >
+|
+  < #DIGIT: [ "0"-"9"] >
+|
+  < #DECIMAL_LITERAL: ["1"-"9"] (["0"-"9"])* >
+|
+  < #HEX_LITERAL: "0" ["x","X"] (["0"-"9","a"-"f","A"-"F"])+ >
+|
+  < #OCTAL_LITERAL: "0" (["0"-"7"])* >
+|
+  <TRUE: "true">
+|
+  <FALSE: "false">
+}
+
+
+
+
+/*
+ * Program structuring syntax follows.
+ */
+
+void CompilationUnit() :
+{
+}
+{
+   (
+        BoolExp()";"
+   )
+   <EOF>
+}
+
+/***** For Boolean Operations  *************/
+
+
+void BoolExp() #void :
+{}
+{
+  ConditionalOrExpression()
+}
+
+void ConditionalOrExpression() #void :
+{}
+{
+  ConditionalAndExpression()
+  ( "||" ConditionalAndExpression() #OrNode(2) )*
+}
+
+void ConditionalAndExpression() #void :
+{}
+{
+  BoolTypeExpression()
+  ( "&&" BoolTypeExpression() #AndNode(2) )*
+}
+
+void BoolTypeExpression() #void :
+{}
+{
+ LOOKAHEAD( PrimaryExpression() "~=" | PrimaryExpression() "@=" | PrimaryExpression() "$=" )
+ BoolStringExpression()
+ |
+ BoolMathExpression()
+}
+
+void BoolStringExpression() #void :
+{}
+{
+ Temp()
+    (
+       "~=" Temp() #SICNode(2)
+       |
+        "@=" Temp() #SSWNode(2)
+       |
+        "$=" Temp() #SEWNode(2)
+    )
+}
+
+void Temp() #void :
+{}
+{
+     "(" BoolExp() ")" | Identifier() | StringLiteral()
+}
+
+void BoolMathExpression() #void :
+{}
+{
+ RelationalExpression()
+ (
+     "==" RelationalExpression() #EQNode(2)
+   |
+     "!=" RelationalExpression() #NENode(2)
+ )?
+}
+
+void RelationalExpression() #void :
+{}
+{
+  AdditiveExpression()
+  (
+    "<" AdditiveExpression() #LTNode(2)
+   |
+    ">" AdditiveExpression() #GTNode(2)
+   |
+    "<=" AdditiveExpression() #LENode(2)
+   |
+    ">=" AdditiveExpression() #GENode(2)
+  )?
+}
+
+/***** For Arithmetic Operations  *************/
+void AdditiveExpression() #void: {}
+{
+   MultiplicativeExpression()
+  (
+    "+" MultiplicativeExpression() #AddNode(2)
+   |
+    "-" MultiplicativeExpression() #SubtractNode(2)
+  )*
+}
+
+void MultiplicativeExpression() #void :
+{}
+{
+  UnaryExpression()
+  (
+    "*" UnaryExpression() #MulNode(2)
+   |
+    "/" UnaryExpression() #DivNode(2)
+   |
+    "%" UnaryExpression() #ModNode(2)
+  )*
+}
+
+void UnaryExpression() #void :
+{}
+{
+"!" UnaryExpression() #NotNode(1)
+|
+   PrimaryExpression()
+}
+
+void PrimaryExpression() #void :
+{}
+{
+   "(" BoolExp() ")" |  IntegerLiteral() | BooleanLiteral() | StringLiteral() | Identifier()
+}
+
+void Identifier() #void :
+{
+   Token t;
+}
+{
+
+   (
+   t = <IDENTIFIER>  {
+    jjtThis.jjtSetValue(t.image);
+   }
+   ) #Id
+
+}
+
+void BooleanLiteral() #void :
+{
+Token t;
+}
+{
+  (
+   t=<TRUE>
+    {
+        jjtThis.jjtSetValue(t.image);
+    }
+  ) #TrueNode
+  |
+  (
+   t=<FALSE>
+    {
+        jjtThis.jjtSetValue(t.image);
+    }
+  ) #FalseNode
+
+}
+
+void IntegerLiteral() #void :
+{
+   Token t;
+}
+{
+  (
+  t=<INTEGER_LITERAL>
+    {
+        jjtThis.jjtSetValue(t.image);
+    }
+   )#IntConstNode
+}
+
+void StringLiteral() #void :
+{
+   Token t;
+}
+{
+
+   (
+   t = <STRING_LITERAL>  {
+    jjtThis.jjtSetValue(t.image);
+   }
+   ) #str
+
+}
